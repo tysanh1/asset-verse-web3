@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import NFTCard from '@/components/NFTCard';
-import { nftService } from '@/services/nftService';
+import { localNFTService } from '@/services/localNFTService';
 import { NFT } from '@/types/nft';
 import { useWeb3 } from '@/context/Web3Context';
 import { Button } from '@/components/ui/button';
@@ -19,7 +19,7 @@ const MyAssets: React.FC = () => {
       
       try {
         setLoading(true);
-        const ownedNFTs = await nftService.getNFTsByOwner(account);
+        const ownedNFTs = await localNFTService.getNFTsByOwner(account);
         setNfts(ownedNFTs);
       } catch (error) {
         console.error('Error fetching NFTs', error);

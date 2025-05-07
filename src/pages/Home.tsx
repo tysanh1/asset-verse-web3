@@ -1,12 +1,11 @@
 
 import { useEffect, useState } from 'react';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from 'react-router-dom';
-import { supabaseNFTService } from '@/services/supabaseNFTService';
+import { localNFTService } from '@/services/localNFTService';
 import { NFT } from '@/types/nft';
 import NFTCard from '@/components/NFTCard';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 
@@ -17,7 +16,7 @@ const Home = () => {
   // Use React Query for data fetching
   const { data: nfts, isLoading: loading, error } = useQuery({
     queryKey: ['nfts'],
-    queryFn: supabaseNFTService.getAllNFTs,
+    queryFn: localNFTService.getAllNFTs,
   });
 
   return (
@@ -34,11 +33,11 @@ const Home = () => {
           Array(8).fill(0).map((_, index) => (
             <Card key={index} className="overflow-hidden h-[360px] flex flex-col animate-pulse">
               <div className="h-48 bg-gray-300 dark:bg-gray-700"></div>
-              <CardContent className="p-4">
+              <div className="p-4">
                 <div className="h-4 bg-gray-300 dark:bg-gray-700 rounded w-2/3 mb-2"></div>
                 <div className="h-3 bg-gray-300 dark:bg-gray-700 rounded w-full mb-4"></div>
                 <div className="h-3 bg-gray-300 dark:bg-gray-700 rounded w-1/2"></div>
-              </CardContent>
+              </div>
             </Card>
           ))
         ) : error ? (

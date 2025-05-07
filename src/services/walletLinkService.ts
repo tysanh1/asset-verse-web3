@@ -1,94 +1,114 @@
-import { supabase } from "@/integrations/supabase/client";
+
+import { v4 as uuidv4 } from 'uuid';
+import { useToast } from '@/hooks/use-toast';
+
+// Type definition
+export interface LinkedWallet {
+  id: string;
+  userId: string;
+  address: string;
+  createdAt: string;
+}
+
+// Initialize wallet links in localStorage if not present
+const initializeWalletLinks = () => {
+  if (!localStorage.getItem('walletLinks')) {
+    localStorage.setItem('walletLinks', JSON.stringify([]));
+  }
+};
+
+// Initialize storage
+initializeWalletLinks();
+
+// Simulated delay
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 export const walletLinkService = {
-  linkWalletToUser: async (userId: string, walletAddress: string) => {
+  // Link a wallet to a user account
+  linkWallet: async (userId: string, walletAddress: string): Promise<LinkedWallet> => {
+    await delay(500);
+    
     try {
+      // Get existing links
+      const links = JSON.parse(localStorage.getItem('walletLinks') || '[]');
+      
       // Check if this wallet is already linked to this user
-      const { data: existingLinks, error: fetchError } = await supabase
-        .from('user_wallets')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('wallet_address', walletAddress);
-        
-      if (fetchError) throw fetchError;
+      const existingLink = links.find((link: LinkedWallet) => 
+        link.userId === userId && link.address.toLowerCase() === walletAddress.toLowerCase()
+      );
       
-      // If this wallet is already linked to this user, don't create a duplicate
-      if (existingLinks && existingLinks.length > 0) {
-        return existingLinks[0];
+      if (existingLink) {
+        return existingLink;
       }
       
-      // Otherwise, create a new link
-      const { data, error } = await supabase
-        .from('user_wallets')
-        .insert({
-          user_id: userId,
-          wallet_address: walletAddress,
-        })
-        .select()
-        .single();
-        
-      if (error) throw error;
+      // Create new link
+      const newLink: LinkedWallet = {
+        id: uuidv4(),
+        userId,
+        address: walletAddress,
+        createdAt: new Date().toISOString()
+      };
       
-      return data;
-    } catch (error) {
-      console.error('Error linking wallet to user:', error);
+      // Save to storage
+      localStorage.setItem('walletLinks', JSON.stringify([...links, newLink]));
+      
+      return newLink;
+    } catch (error: any) {
+      const { toast } = useToast();
+      toast({
+        title: "Failed to link wallet",
+        description: error.message || "Could not link wallet to your account",
+        variant: "destructive"
+      });
       throw error;
     }
   },
   
-  getUserWallets: async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('user_wallets')
-        .select('*')
-        .eq('user_id', userId);
-        
-      if (error) throw error;
-      
-      return data;
-    } catch (error) {
-      console.error('Error getting user wallets:', error);
-      throw error;
-    }
+  // Get all wallets linked to a user
+  getWalletsByUser: async (userId: string): Promise<LinkedWallet[]> => {
+    await delay(300);
+    
+    const links = JSON.parse(localStorage.getItem('walletLinks') || '[]');
+    return links.filter((link: LinkedWallet) => link.userId === userId);
   },
   
-  getUserByWallet: async (walletAddress: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('user_wallets')
-        .select('user_id')
-        .eq('wallet_address', walletAddress)
-        .single();
-        
-      if (error) {
-        if (error.code === 'PGRST116') {
-          // No rows found
-          return null;
-        }
-        throw error;
-      }
-      
-      return data.user_id;
-    } catch (error) {
-      console.error('Error getting user by wallet:', error);
-      throw error;
-    }
+  // Get user by wallet address
+  getUserByWallet: async (walletAddress: string): Promise<string | null> => {
+    await delay(300);
+    
+    const links = JSON.parse(localStorage.getItem('walletLinks') || '[]');
+    const link = links.find((link: LinkedWallet) => 
+      link.address.toLowerCase() === walletAddress.toLowerCase()
+    );
+    
+    return link ? link.userId : null;
   },
   
-  unlinkWallet: async (userId: string, walletAddress: string) => {
+  // Unlink a wallet from a user account
+  unlinkWallet: async (userId: string, walletAddress: string): Promise<boolean> => {
+    await delay(500);
+    
     try {
-      const { error } = await supabase
-        .from('user_wallets')
-        .delete()
-        .eq('user_id', userId)
-        .eq('wallet_address', walletAddress);
-        
-      if (error) throw error;
+      // Get existing links
+      const links = JSON.parse(localStorage.getItem('walletLinks') || '[]');
+      
+      // Filter out the link we want to remove
+      const updatedLinks = links.filter((link: LinkedWallet) => 
+        !(link.userId === userId && link.address.toLowerCase() === walletAddress.toLowerCase())
+      );
+      
+      // Save updated links
+      localStorage.setItem('walletLinks', JSON.stringify(updatedLinks));
       
       return true;
-    } catch (error) {
-      console.error('Error unlinking wallet:', error);
-      throw error;
+    } catch (error: any) {
+      const { toast } = useToast();
+      toast({
+        title: "Failed to unlink wallet",
+        description: error.message || "Could not unlink wallet from your account",
+        variant: "destructive"
+      });
+      return false;
     }
   }
 };

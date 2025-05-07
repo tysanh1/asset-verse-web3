@@ -1,12 +1,15 @@
 
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { Session, User } from "@supabase/supabase-js";
-import { authService } from "@/services/authService";
-import { supabase } from "@/integrations/supabase/client";
+import { localAuthService } from "@/services/localAuthService";
 import { useToast } from "@/hooks/use-toast";
 
+interface User {
+  id: string;
+  email: string;
+}
+
 interface AuthContextProps {
-  session: Session | null;
+  session: any | null;
   user: User | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
@@ -18,7 +21,7 @@ interface AuthContextProps {
 const AuthContext = createContext<AuthContextProps | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [session, setSession] = useState<Session | null>(null);
+  const [session, setSession] = useState<any | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
@@ -28,7 +31,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const getInitialSession = async () => {
       try {
         setLoading(true);
-        const { data } = await supabase.auth.getSession();
+        const { data } = await localAuthService.getSession();
         setSession(data.session);
         setUser(data.session?.user ?? null);
       } catch (error) {
@@ -41,7 +44,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     getInitialSession();
 
     // Listen for auth changes
-    const { data: authListener } = supabase.auth.onAuthStateChange(
+    const { subscription } = localAuthService.onAuthStateChange(
       async (event, newSession) => {
         setSession(newSession);
         setUser(newSession?.user ?? null);
@@ -50,43 +53,68 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     );
 
     return () => {
-      authListener.subscription.unsubscribe();
+      subscription.unsubscribe();
     };
   }, []);
 
   const signIn = async (email: string, password: string) => {
     try {
-      const { user: authUser, session: authSession } = await authService.signIn(email, password);
+      const { user: authUser, session: authSession } = await localAuthService.signIn(email, password);
       setUser(authUser);
       setSession(authSession);
-    } catch (error) {
-      // Error is handled in authService
+    } catch (error: any) {
+      toast({
+        title: "Login failed",
+        description: error.message || "Invalid credentials",
+        variant: "destructive"
+      });
+      throw error;
     }
   };
 
   const signUp = async (email: string, password: string) => {
     try {
-      await authService.signUp(email, password);
-    } catch (error) {
-      // Error is handled in authService
+      await localAuthService.signUp(email, password);
+      toast({
+        title: "Account created",
+        description: "Please log in with your new account",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Signup failed",
+        description: error.message || "Could not create account",
+        variant: "destructive"
+      });
+      throw error;
     }
   };
 
   const signOut = async () => {
     try {
-      await authService.signOut();
+      await localAuthService.signOut();
       setUser(null);
       setSession(null);
-    } catch (error) {
-      // Error is handled in authService
+      toast({
+        title: "Logged out successfully",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error signing out",
+        description: error.message,
+        variant: "destructive"
+      });
     }
   };
 
   const resetPassword = async (email: string) => {
     try {
-      await authService.resetPassword(email);
-    } catch (error) {
-      // Error is handled in authService
+      await localAuthService.resetPassword(email);
+    } catch (error: any) {
+      toast({
+        title: "Error resetting password",
+        description: error.message,
+        variant: "destructive"
+      });
     }
   };
 

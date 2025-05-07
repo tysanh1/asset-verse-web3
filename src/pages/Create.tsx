@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
@@ -11,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { useWeb3 } from '@/context/Web3Context';
 import { NFTFormData } from '@/types/nft';
-import { nftService } from '@/services/nftService';
+import { localNFTService } from '@/services/localNFTService';
 import { ImagePlus, Loader2, X } from 'lucide-react';
 
 const formSchema = z.object({
@@ -48,7 +47,7 @@ const Create: React.FC = () => {
 
     try {
       setIsSubmitting(true);
-      await nftService.createNFT(data, account);
+      await localNFTService.createNFT(data, account);
       
       toast({
         title: "Asset created",
@@ -165,7 +164,14 @@ const Create: React.FC = () => {
                             />
                             <button
                               type="button"
-                              onClick={clearImage}
+                              onClick={() => {
+                                form.setValue('image', null);
+                                setImagePreview(null);
+                                const inputEl = document.getElementById('image-upload') as HTMLInputElement;
+                                if (inputEl) {
+                                  inputEl.value = '';
+                                }
+                              }}
                               className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full"
                             >
                               <X className="w-4 h-4" />
@@ -183,7 +189,17 @@ const Create: React.FC = () => {
                               id="image-upload"
                               type="file"
                               accept="image/*"
-                              onChange={handleImageChange}
+                              onChange={(event) => {
+                                const file = event.target.files?.[0] || null;
+                                if (file) {
+                                  form.setValue('image', file);
+                                  const reader = new FileReader();
+                                  reader.onloadend = () => {
+                                    setImagePreview(reader.result as string);
+                                  };
+                                  reader.readAsDataURL(file);
+                                }
+                              }}
                               className="hidden"
                             />
                           </div>

@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect } from 'react';
-import { nftService } from '@/services/nftService';
+import { localNFTService } from '@/services/localNFTService';
 import { Transaction } from '@/types/nft';
 import { useWeb3 } from '@/context/Web3Context';
 import { Button } from '@/components/ui/button';
@@ -19,7 +18,7 @@ const Transactions: React.FC = () => {
       
       try {
         setLoading(true);
-        const userTxs = await nftService.getTransactionsByUser(account);
+        const userTxs = await localNFTService.getTransactionsByUser(account);
         setTransactions(userTxs);
       } catch (error) {
         console.error('Error fetching transactions', error);
@@ -157,13 +156,19 @@ const Transactions: React.FC = () => {
                         </Link>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-mono">
-                        {formatAddress(tx.from)}
+                        {tx.from.substring(0, 6)}...{tx.from.substring(38)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-mono">
-                        {formatAddress(tx.to)}
+                        {tx.to.substring(0, 6)}...{tx.to.substring(38)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                        {formatDate(tx.timestamp)}
+                        {new Date(tx.timestamp).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                         <Link to={`/asset/${tx.tokenId}`}>
