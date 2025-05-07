@@ -3,31 +3,22 @@ import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from 'react-router-dom';
-import { nftService } from '@/services/nftService';
+import { supabaseNFTService } from '@/services/supabaseNFTService';
 import { NFT } from '@/types/nft';
 import NFTCard from '@/components/NFTCard';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/context/AuthContext';
+import { useQuery } from '@tanstack/react-query';
 
 const Home = () => {
   const navigate = useNavigate();
-  const [nfts, setNfts] = useState<NFT[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const { user } = useAuth();
 
-  useEffect(() => {
-    const fetchNFTs = async () => {
-      setLoading(true);
-      try {
-        const fetchedNfts = await nftService.getAllNFTs();
-        setNfts(fetchedNfts);
-      } catch (error) {
-        console.error('Error fetching NFTs:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchNFTs();
-  }, []);
+  // Use React Query for data fetching
+  const { data: nfts, isLoading: loading, error } = useQuery({
+    queryKey: ['nfts'],
+    queryFn: supabaseNFTService.getAllNFTs,
+  });
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -50,7 +41,12 @@ const Home = () => {
               </CardContent>
             </Card>
           ))
-        ) : nfts.length > 0 ? (
+        ) : error ? (
+          <div className="col-span-full text-center py-12">
+            <h3 className="text-xl font-semibold mb-2">Error loading assets</h3>
+            <p className="text-red-500">Please try again later</p>
+          </div>
+        ) : nfts && nfts.length > 0 ? (
           nfts.map(nft => (
             <NFTCard key={nft.id} nft={nft} onClick={() => navigate(`/asset/${nft.id}`)} />
           ))

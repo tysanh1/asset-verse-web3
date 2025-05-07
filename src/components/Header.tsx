@@ -1,12 +1,15 @@
 
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useWeb3 } from '@/context/Web3Context';
+import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Wallet, LogOut } from 'lucide-react';
+import { Wallet, LogOut, User, LogIn } from 'lucide-react';
 
 const Header: React.FC = () => {
   const { account, connectWallet, disconnectWallet, isConnecting, isConnected } = useWeb3();
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
 
   return (
     <header className="bg-white dark:bg-slate-900 shadow-sm px-4 py-4">
@@ -31,30 +34,52 @@ const Header: React.FC = () => {
             </Link>
           </nav>
           
-          {isConnected ? (
-            <div className="flex items-center gap-2">
-              <span className="hidden md:inline-block px-3 py-1 bg-gray-100 dark:bg-slate-800 rounded-md text-sm">
-                {account?.substring(0, 6)}...{account?.substring(38)}
-              </span>
+          <div className="flex items-center gap-2">
+            {user ? (
               <Button 
                 variant="outline"
                 size="sm" 
-                onClick={disconnectWallet}
+                onClick={() => signOut()}
               >
                 <LogOut className="h-4 w-4 mr-2" />
-                <span className="hidden md:inline">Disconnect</span>
+                <span className="hidden md:inline">Sign Out</span>
               </Button>
-            </div>
-          ) : (
-            <Button
-              onClick={connectWallet}
-              disabled={isConnecting}
-              className="bg-web3-purple hover:bg-web3-deep-purple"
-            >
-              <Wallet className="h-4 w-4 mr-2" />
-              {isConnecting ? 'Connecting...' : 'Connect Wallet'}
-            </Button>
-          )}
+            ) : (
+              <Button 
+                variant="outline"
+                size="sm" 
+                onClick={() => navigate('/auth')}
+              >
+                <User className="h-4 w-4 mr-2" />
+                <span className="hidden md:inline">Sign In</span>
+              </Button>
+            )}
+            
+            {isConnected ? (
+              <div className="flex items-center gap-2">
+                <span className="hidden md:inline-block px-3 py-1 bg-gray-100 dark:bg-slate-800 rounded-md text-sm">
+                  {account?.substring(0, 6)}...{account?.substring(38)}
+                </span>
+                <Button 
+                  variant="outline"
+                  size="sm" 
+                  onClick={disconnectWallet}
+                >
+                  <LogOut className="h-4 w-4 mr-2" />
+                  <span className="hidden md:inline">Disconnect</span>
+                </Button>
+              </div>
+            ) : (
+              <Button
+                onClick={connectWallet}
+                disabled={isConnecting}
+                className="bg-web3-purple hover:bg-web3-deep-purple"
+              >
+                <Wallet className="h-4 w-4 mr-2" />
+                {isConnecting ? 'Connecting...' : 'Connect Wallet'}
+              </Button>
+            )}
+          </div>
         </div>
       </div>
     </header>

@@ -8,11 +8,12 @@ import { Eye } from 'lucide-react';
 
 interface NFTCardProps {
   nft: NFT;
+  onClick?: () => void;
 }
 
-const NFTCard: React.FC<NFTCardProps> = ({ nft }) => {
+const NFTCard: React.FC<NFTCardProps> = ({ nft, onClick }) => {
   return (
-    <div className="nft-card">
+    <div className="nft-card" onClick={onClick}>
       <div className="nft-card-inner">
         <CardHeader className="p-0">
           <div className="relative aspect-square overflow-hidden rounded-lg">
