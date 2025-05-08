@@ -8,10 +8,11 @@ export interface NFT {
   creator: string;
   tokenURI: string;
   createdAt: string;
-  // Optional blockchain-related fields
+  // Blockchain-related fields
   contractAddress?: string;
   tokenId?: string;
   blockNumber?: number;
+  chainId?: number;
 }
 
 export interface NFTFormData {
@@ -33,14 +34,26 @@ export interface Transaction {
   tokenId: string;
   timestamp: string;
   type: 'mint' | 'transfer';
-  // Optional blockchain-related fields
+  // Blockchain-related fields
   blockNumber?: number;
   gasUsed?: string;
   confirmations?: number;
+  chainId?: number;
 }
 
 export interface SmartContractConfig {
   address: string;
   abi: any[];
   chainId: number;
+  name?: string;
+  symbol?: string;
+}
+
+export interface NetworkConfig {
+  chainId: number;
+  name: string;
+  currency: string;
+  rpcUrl: string;
+  blockExplorer: string;
+  isTestnet: boolean;
 }

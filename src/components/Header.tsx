@@ -1,15 +1,65 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useWeb3 } from '@/context/Web3Context';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Wallet, LogOut, User, LogIn } from 'lucide-react';
+import { 
+  Wallet, 
+  LogOut, 
+  User, 
+  ChevronDown, 
+  Copy, 
+  ExternalLink, 
+  Check,
+  Ethereum
+} from 'lucide-react';
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { SUPPORTED_NETWORKS } from '@/context/Web3Context';
+import { useToast } from '@/hooks/use-toast';
 
 const Header: React.FC = () => {
-  const { account, connectWallet, disconnectWallet, isConnecting, isConnected } = useWeb3();
+  const { 
+    account, 
+    connectWallet, 
+    disconnectWallet, 
+    isConnecting, 
+    isConnected,
+    chainId,
+    balance,
+    switchNetwork,
+    network
+  } = useWeb3();
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const [copied, setCopied] = useState(false);
+
+  const copyAddress = () => {
+    if (account) {
+      navigator.clipboard.writeText(account);
+      setCopied(true);
+      toast({
+        title: "Address copied",
+        description: "Wallet address copied to clipboard",
+      });
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const openBlockExplorer = () => {
+    if (account && network) {
+      const explorerUrl = `${network.blockExplorer}/address/${account}`;
+      window.open(explorerUrl, '_blank');
+    }
+  };
 
   return (
     <header className="bg-white dark:bg-slate-900 shadow-sm px-4 py-4">
@@ -57,17 +107,73 @@ const Header: React.FC = () => {
             
             {isConnected ? (
               <div className="flex items-center gap-2">
-                <span className="hidden md:inline-block px-3 py-1 bg-gray-100 dark:bg-slate-800 rounded-md text-sm">
-                  {account?.substring(0, 6)}...{account?.substring(38)}
-                </span>
-                <Button 
-                  variant="outline"
-                  size="sm" 
-                  onClick={disconnectWallet}
-                >
-                  <LogOut className="h-4 w-4 mr-2" />
-                  <span className="hidden md:inline">Disconnect</span>
-                </Button>
+                {/* Network indicator */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="flex items-center gap-1">
+                      <div className={`w-2 h-2 rounded-full ${network?.isTestnet ? 'bg-yellow-400' : 'bg-green-400'}`}></div>
+                      <span className="hidden md:inline max-w-[100px] truncate">{network?.name || 'Unknown'}</span>
+                      <ChevronDown size={14} />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuLabel>Switch Network</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    {Object.values(SUPPORTED_NETWORKS).map(network => (
+                      <DropdownMenuItem 
+                        key={network.chainId} 
+                        onClick={() => switchNetwork(network.chainId)}
+                        className="cursor-pointer"
+                      >
+                        <div className="flex items-center">
+                          <div className={`w-2 h-2 rounded-full mr-2 ${network.isTestnet ? 'bg-yellow-400' : 'bg-green-400'}`}></div>
+                          {network.name}
+                          {network.chainId === chainId && <Check className="ml-2 h-4 w-4 text-green-500" />}
+                        </div>
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                
+                {/* Wallet dropdown */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      <Ethereum className="h-4 w-4 mr-2 text-purple-500" />
+                      <span className="hidden md:inline">
+                        {account?.substring(0, 6)}...{account?.substring(38)}
+                      </span>
+                      <span className="md:hidden">
+                        {account?.substring(0, 4)}...
+                      </span>
+                      <ChevronDown size={14} className="ml-1" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuLabel>Wallet</DropdownMenuLabel>
+                    {balance && (
+                      <div className="px-2 py-1 text-sm">
+                        <span className="font-medium">{parseFloat(balance).toFixed(4)} {network?.currency || 'ETH'}</span>
+                      </div>
+                    )}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem className="cursor-pointer" onClick={copyAddress}>
+                      <Copy className="mr-2 h-4 w-4" />
+                      {copied ? "Copied!" : "Copy Address"}
+                    </DropdownMenuItem>
+                    {network?.blockExplorer && (
+                      <DropdownMenuItem className="cursor-pointer" onClick={openBlockExplorer}>
+                        <ExternalLink className="mr-2 h-4 w-4" />
+                        View on Explorer
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem className="cursor-pointer" onClick={disconnectWallet}>
+                      <LogOut className="mr-2 h-4 w-4" />
+                      Disconnect
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             ) : (
               <Button

@@ -4,6 +4,7 @@ import { NFT_CONTRACT_ABI, NFT_CONTRACT_ADDRESS } from '../contracts/NFTContract
 import { NFT, Transaction } from '@/types/nft';
 import { v4 as uuidv4 } from 'uuid';
 import { localNFTService } from './localNFTService';
+import { SUPPORTED_NETWORKS } from '@/context/Web3Context';
 
 // Helper to check if window.ethereum is available
 const isEthereumAvailable = () => {
@@ -24,6 +25,25 @@ const getSigner = async () => {
   return provider.getSigner();
 };
 
+// Get current network information
+const getNetworkInfo = async () => {
+  const provider = await getProvider();
+  const network = await provider.getNetwork();
+  const chainId = Number(network.chainId);
+  
+  return {
+    chainId,
+    networkInfo: SUPPORTED_NETWORKS[chainId] || {
+      chainId,
+      name: network.name || 'Unknown Network',
+      currency: 'ETH',
+      rpcUrl: '',
+      blockExplorer: '',
+      isTestnet: false
+    }
+  };
+};
+
 export const smartContractService = {
   // Connect to wallet and return address
   connectWallet: async (): Promise<string> => {
@@ -38,6 +58,78 @@ export const smartContractService = {
       console.error("Error connecting wallet:", error);
       throw new Error(error.message || "Failed to connect wallet");
     }
+  },
+  
+  // Get current chain ID
+  getChainId: async (): Promise<number> => {
+    if (!isEthereumAvailable()) {
+      throw new Error("Ethereum provider not found.");
+    }
+    
+    const { chainId } = await getNetworkInfo();
+    return chainId;
+  },
+  
+  // Check if the wallet is connected to the correct network
+  checkNetwork: async (requiredChainId: number): Promise<boolean> => {
+    const { chainId } = await getNetworkInfo();
+    return chainId === requiredChainId;
+  },
+  
+  // Switch to a specific network
+  switchNetwork: async (chainId: number): Promise<boolean> => {
+    if (!isEthereumAvailable()) {
+      throw new Error("Ethereum provider not found.");
+    }
+    
+    try {
+      await window.ethereum.request({
+        method: 'wallet_switchEthereumChain',
+        params: [{ chainId: `0x${chainId.toString(16)}` }],
+      });
+      return true;
+    } catch (error: any) {
+      // This error code indicates the chain has not been added to MetaMask
+      if (error.code === 4902) {
+        // If we have network configuration, try to add it
+        const network = SUPPORTED_NETWORKS[chainId];
+        if (network) {
+          try {
+            await window.ethereum.request({
+              method: 'wallet_addEthereumChain',
+              params: [
+                {
+                  chainId: `0x${chainId.toString(16)}`,
+                  chainName: network.name,
+                  nativeCurrency: {
+                    name: network.currency,
+                    symbol: network.currency,
+                    decimals: 18,
+                  },
+                  rpcUrls: [network.rpcUrl],
+                  blockExplorerUrls: [network.blockExplorer],
+                },
+              ],
+            });
+            return true;
+          } catch (addError) {
+            console.error("Error adding network:", addError);
+            throw new Error("Failed to add network to wallet");
+          }
+        } else {
+          throw new Error("Network configuration not found");
+        }
+      }
+      console.error("Error switching network:", error);
+      throw new Error(error.message || "Failed to switch network");
+    }
+  },
+  
+  // Get user's balance
+  getBalance: async (address: string): Promise<string> => {
+    const provider = await getProvider();
+    const balance = await provider.getBalance(address);
+    return ethers.formatEther(balance);
   },
   
   // Get NFT contract
@@ -56,12 +148,20 @@ export const smartContractService = {
   // Here we'll use local storage but simulate blockchain operation
   mintNFT: async (data: { name: string, description: string, image: string | File }, ownerAddress: string): Promise<NFT> => {
     try {
+      // Check wallet connection
+      if (!isEthereumAvailable()) {
+        throw new Error("Ethereum wallet not found. Please install MetaMask.");
+      }
+      
       // In a real implementation, this would upload to IPFS first
       // and then call the contract's mint function with the tokenURI
       
       // For this demo, we'll use local storage but simulate the blockchain operation
       const tokenId = uuidv4();
       const timestamp = new Date().toISOString();
+      
+      // Get current network information
+      const { chainId, networkInfo } = await getNetworkInfo();
       
       // Create NFT metadata
       // Convert image to string URL if it's a File
@@ -87,6 +187,10 @@ export const smartContractService = {
         creator: ownerAddress,
         tokenURI: `ipfs://QmFake/${tokenId}`, // Simulated IPFS URI
         createdAt: timestamp,
+        contractAddress: NFT_CONTRACT_ADDRESS,
+        tokenId: Math.floor(Math.random() * 1000000).toString(), // Simulated token ID
+        blockNumber: Math.floor(Date.now() / 1000), // Simulated block number
+        chainId: chainId
       };
       
       // Create mint transaction
@@ -98,6 +202,10 @@ export const smartContractService = {
         tokenId,
         timestamp,
         type: 'mint',
+        blockNumber: nft.blockNumber,
+        gasUsed: (Math.floor(Math.random() * 100000) + 50000).toString(), // Simulated gas used
+        confirmations: 1,
+        chainId: chainId
       };
       
       // Store in local storage for demo
@@ -108,7 +216,7 @@ export const smartContractService = {
       localStorage.setItem('transactions', JSON.stringify([...existingTxs, transaction]));
       
       // Log the operation
-      console.log(`Minted NFT ${tokenId} to ${ownerAddress}`);
+      console.log(`Minted NFT ${tokenId} to ${ownerAddress} on network ${networkInfo.name} (${chainId})`);
       
       return nft;
     } catch (error: any) {
@@ -134,6 +242,9 @@ export const smartContractService = {
         throw new Error("Not the owner of this NFT");
       }
       
+      // Get current network information
+      const { chainId } = await getNetworkInfo();
+      
       // Update owner
       nft.owner = to;
       existingNFTs[nftIndex] = nft;
@@ -148,13 +259,17 @@ export const smartContractService = {
         tokenId,
         timestamp: new Date().toISOString(),
         type: 'transfer',
+        blockNumber: Math.floor(Date.now() / 1000), // Simulated block number
+        gasUsed: (Math.floor(Math.random() * 100000) + 50000).toString(), // Simulated gas used
+        confirmations: 1,
+        chainId: chainId
       };
       
       const existingTxs = JSON.parse(localStorage.getItem('transactions') || '[]');
       localStorage.setItem('transactions', JSON.stringify([...existingTxs, transaction]));
       
       // Log the operation
-      console.log(`Transferred NFT ${tokenId} from ${from} to ${to}`);
+      console.log(`Transferred NFT ${tokenId} from ${from} to ${to} on chain ${chainId}`);
       
       return true;
     } catch (error: any) {
@@ -179,5 +294,26 @@ export const smartContractService = {
   getNFTTransactions: async (tokenId: string): Promise<Transaction[]> => {
     // For demo, use local storage data
     return localNFTService.getTransactionsByNFT(tokenId);
+  },
+  
+  // Get all transactions for a specific user address
+  getTransactionsByAddress: async (address: string): Promise<Transaction[]> => {
+    const transactions = JSON.parse(localStorage.getItem('transactions') || '[]');
+    return transactions.filter((tx: Transaction) => 
+      tx.from.toLowerCase() === address.toLowerCase() || 
+      tx.to.toLowerCase() === address.toLowerCase()
+    );
+  },
+  
+  // Get gas price
+  getGasPrice: async (): Promise<string> => {
+    try {
+      const provider = await getProvider();
+      const gasPrice = await provider.getFeeData();
+      return ethers.formatUnits(gasPrice.gasPrice || 0, 'gwei');
+    } catch (error) {
+      console.error("Error getting gas price:", error);
+      return "0";
+    }
   }
 };
