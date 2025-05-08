@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -10,10 +10,9 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { useWeb3 } from '@/context/Web3Context';
-import { NFTFormData, NFTDraft } from '@/types/nft';
+import { NFTFormData } from '@/types/nft';
 import { smartContractService } from '@/services/smartContractService';
-import { ImagePlus, Loader2, X, Save, Trash2 } from 'lucide-react';
-import { v4 as uuidv4 } from 'uuid';
+import { ImagePlus, Loader2, X } from 'lucide-react';
 
 const formSchema = z.object({
   name: z.string().min(1, 'Name is required').max(100),
@@ -21,17 +20,12 @@ const formSchema = z.object({
   image: z.any().refine((file) => file !== null, 'Image is required'),
 });
 
-const AUTO_SAVE_DELAY = 2000; // 2 seconds
-
 const Create: React.FC = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const { account, isConnected, connectWallet } = useWeb3();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [draftId, setDraftId] = useState<string>(uuidv4());
-  const [lastSaved, setLastSaved] = useState<Date | null>(null);
-  const [autoSaveTimer, setAutoSaveTimer] = useState<NodeJS.Timeout | null>(null);
   
   const form = useForm<NFTFormData>({
     resolver: zodResolver(formSchema),
@@ -41,145 +35,6 @@ const Create: React.FC = () => {
       image: null,
     },
   });
-
-  // Load saved draft when component mounts
-  useEffect(() => {
-    loadDraft();
-  }, []);
-
-  // Setup auto-save when form values change
-  useEffect(() => {
-    const subscription = form.watch(() => {
-      if (autoSaveTimer) {
-        clearTimeout(autoSaveTimer);
-      }
-      
-      const timer = setTimeout(() => {
-        saveFormAsDraft();
-      }, AUTO_SAVE_DELAY);
-      
-      setAutoSaveTimer(timer);
-    });
-    
-    return () => {
-      subscription.unsubscribe();
-      if (autoSaveTimer) {
-        clearTimeout(autoSaveTimer);
-      }
-    };
-  }, [form.watch, imagePreview]);
-
-  const loadDraft = () => {
-    try {
-      const draftsJSON = localStorage.getItem('nft_drafts');
-      if (draftsJSON) {
-        const drafts: NFTDraft[] = JSON.parse(draftsJSON);
-        if (drafts.length > 0) {
-          const latestDraft = drafts[drafts.length - 1];
-          
-          form.setValue('name', latestDraft.name);
-          form.setValue('description', latestDraft.description);
-          
-          if (latestDraft.image) {
-            setImagePreview(latestDraft.image);
-            // No need to set form.setValue('image') since we can't convert string back to File
-            // We'll handle this during submission
-          }
-          
-          setDraftId(latestDraft.id);
-          toast({
-            title: "Draft loaded",
-            description: `Last saved on ${new Date(latestDraft.lastUpdated).toLocaleString()}`,
-          });
-        }
-      }
-    } catch (error) {
-      console.error("Error loading draft:", error);
-    }
-  };
-
-  const saveFormAsDraft = () => {
-    try {
-      const formValues = form.getValues();
-      const now = new Date();
-      
-      // Create draft object
-      const draft: NFTDraft = {
-        id: draftId,
-        name: formValues.name,
-        description: formValues.description,
-        image: imagePreview,
-        lastUpdated: now.toISOString(),
-      };
-      
-      // Get existing drafts or initialize empty array
-      const draftsJSON = localStorage.getItem('nft_drafts');
-      let drafts: NFTDraft[] = draftsJSON ? JSON.parse(draftsJSON) : [];
-      
-      // Remove existing draft with same ID if exists
-      drafts = drafts.filter(d => d.id !== draftId);
-      
-      // Add new draft
-      drafts.push(draft);
-      
-      // Save back to localStorage
-      localStorage.setItem('nft_drafts', JSON.stringify(drafts));
-      
-      setLastSaved(now);
-      
-      // Show toast only on manual save
-      if (autoSaveTimer === null) {
-        toast({
-          title: "Draft saved",
-          description: `Your draft has been saved at ${now.toLocaleString()}`,
-        });
-      }
-    } catch (error) {
-      console.error("Error saving draft:", error);
-      toast({
-        title: "Error",
-        description: "Could not save draft",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const deleteDraft = () => {
-    try {
-      // Get existing drafts
-      const draftsJSON = localStorage.getItem('nft_drafts');
-      if (draftsJSON) {
-        let drafts: NFTDraft[] = JSON.parse(draftsJSON);
-        
-        // Remove draft with current ID
-        drafts = drafts.filter(d => d.id !== draftId);
-        
-        // Save back to localStorage
-        localStorage.setItem('nft_drafts', JSON.stringify(drafts));
-      }
-      
-      // Reset form
-      form.reset({
-        name: '',
-        description: '',
-        image: null,
-      });
-      setImagePreview(null);
-      setDraftId(uuidv4());
-      
-      toast({
-        title: "Draft deleted",
-        description: "Your draft has been deleted",
-      });
-    } catch (error) {
-      console.error("Error deleting draft:", error);
-      toast({
-        title: "Error",
-        description: "Could not delete draft",
-        variant: "destructive",
-      });
-    }
-  };
 
   const onSubmit = async (data: NFTFormData) => {
     if (!isConnected || !account) {
@@ -197,7 +52,7 @@ const Create: React.FC = () => {
       // Prepare image data for the smart contract service
       let imageData: string | File = data.image as File;
       
-      // If we're using a draft image (which is already a string)
+      // If we're using a preview image which is a string
       if (!data.image && imagePreview) {
         imageData = imagePreview;
       } else if (data.image instanceof File) {
@@ -218,9 +73,6 @@ const Create: React.FC = () => {
         },
         account
       );
-      
-      // Delete the draft after successful submission
-      deleteDraft();
       
       toast({
         title: "Asset created",
@@ -285,33 +137,7 @@ const Create: React.FC = () => {
       <div className="max-w-2xl mx-auto">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold">Create Digital Asset</h1>
-          <div className="flex space-x-2">
-            <Button 
-              type="button" 
-              variant="outline" 
-              className="flex items-center" 
-              onClick={saveFormAsDraft}
-            >
-              <Save className="mr-2 h-4 w-4" />
-              Save Draft
-            </Button>
-            <Button 
-              type="button" 
-              variant="outline" 
-              className="flex items-center text-red-500 hover:text-red-600" 
-              onClick={deleteDraft}
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              Delete
-            </Button>
-          </div>
         </div>
-        
-        {lastSaved && (
-          <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-            Last auto-saved: {lastSaved.toLocaleString()}
-          </p>
-        )}
         
         <div className="bg-white dark:bg-slate-900 rounded-lg shadow-md p-6">
           <Form {...form}>

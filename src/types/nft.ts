@@ -21,12 +21,6 @@ export interface NFTFormData {
   image: File | null;
 }
 
-export interface NFTDraft extends Omit<NFTFormData, 'image'> {
-  id: string;
-  image: string | null;
-  lastUpdated: string;
-}
-
 export interface Transaction {
   hash: string;
   from: string;

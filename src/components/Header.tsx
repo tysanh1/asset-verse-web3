@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useWeb3 } from '@/context/Web3Context';
@@ -12,7 +11,7 @@ import {
   Copy, 
   ExternalLink, 
   Check,
-  Ethereum
+  CircleDollarSign
 } from 'lucide-react';
 import { 
   DropdownMenu,
@@ -139,7 +138,7 @@ const Header: React.FC = () => {
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" size="sm">
-                      <Ethereum className="h-4 w-4 mr-2 text-purple-500" />
+                      <CircleDollarSign className="h-4 w-4 mr-2 text-purple-500" />
                       <span className="hidden md:inline">
                         {account?.substring(0, 6)}...{account?.substring(38)}
                       </span>
