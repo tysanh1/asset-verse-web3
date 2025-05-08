@@ -64,7 +64,20 @@ export const smartContractService = {
       const timestamp = new Date().toISOString();
       
       // Create NFT metadata
-      const imageUrl = typeof data.image === 'string' ? data.image : URL.createObjectURL(data.image);
+      // Convert image to string URL if it's a File
+      let imageUrl: string;
+      if (typeof data.image === 'string') {
+        imageUrl = data.image;
+      } else {
+        // Convert File to data URL
+        imageUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(data.image as File);
+        });
+      }
+      
       const nft: NFT = {
         id: tokenId,
         name: data.name,
