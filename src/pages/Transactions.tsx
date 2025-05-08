@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { localNFTService } from '@/services/localNFTService';
+import { smartContractService } from '@/services/smartContractService';
 import { Transaction } from '@/types/nft';
 import { useWeb3 } from '@/context/Web3Context';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Link } from 'react-router-dom';
 import { Clock, ExternalLink, Loader2 } from 'lucide-react';
+import { localNFTService } from '@/services/localNFTService';
 
 const Transactions: React.FC = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -18,6 +19,7 @@ const Transactions: React.FC = () => {
       
       try {
         setLoading(true);
+        // For demo, we'll use local service as fallback
         const userTxs = await localNFTService.getTransactionsByUser(account);
         setTransactions(userTxs);
       } catch (error) {

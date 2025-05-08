@@ -1,13 +1,13 @@
-
 import { useEffect, useState } from 'react';
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from 'react-router-dom';
-import { localNFTService } from '@/services/localNFTService';
 import { NFT } from '@/types/nft';
 import NFTCard from '@/components/NFTCard';
 import { useAuth } from '@/context/AuthContext';
 import { useQuery } from '@tanstack/react-query';
+import { smartContractService } from '@/services/smartContractService';
+import { localNFTService } from '@/services/localNFTService';
 
 const Home = () => {
   const navigate = useNavigate();
@@ -16,6 +16,7 @@ const Home = () => {
   // Use React Query for data fetching
   const { data: nfts, isLoading: loading, error } = useQuery({
     queryKey: ['nfts'],
+    // Use local service as fallback but prefer smart contract service in a real app
     queryFn: localNFTService.getAllNFTs,
   });
 
@@ -24,7 +25,7 @@ const Home = () => {
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold">Discover Digital Assets</h1>
         <Button onClick={() => navigate('/create')} className="bg-gradient-to-r from-purple-600 to-blue-500 hover:from-purple-700 hover:to-blue-600">
-          Create Asset
+          Mint New Asset
         </Button>
       </div>
       
@@ -56,7 +57,7 @@ const Home = () => {
               Start creating digital assets or connect your wallet to see your collections
             </p>
             <Button onClick={() => navigate('/create')} className="bg-gradient-to-r from-purple-600 to-blue-500 hover:from-purple-700 hover:to-blue-600">
-              Create Your First Asset
+              Mint Your First Asset
             </Button>
           </div>
         )}

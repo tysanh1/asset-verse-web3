@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import NFTCard from '@/components/NFTCard';
-import { localNFTService } from '@/services/localNFTService';
+import { smartContractService } from '@/services/smartContractService';
 import { NFT } from '@/types/nft';
 import { useWeb3 } from '@/context/Web3Context';
 import { Button } from '@/components/ui/button';
@@ -19,7 +19,7 @@ const MyAssets: React.FC = () => {
       
       try {
         setLoading(true);
-        const ownedNFTs = await localNFTService.getNFTsByOwner(account);
+        const ownedNFTs = await smartContractService.getNFTsByOwner(account);
         setNfts(ownedNFTs);
       } catch (error) {
         console.error('Error fetching NFTs', error);
@@ -59,9 +59,9 @@ const MyAssets: React.FC = () => {
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold">My Digital Assets</h1>
         <Link to="/create">
-          <Button className="bg-web3-purple hover:bg-web3-deep-purple">
+          <Button className="bg-gradient-to-r from-purple-600 to-blue-500 hover:from-purple-700 hover:to-blue-600">
             <ImagePlus className="mr-2 h-5 w-5" />
-            Create New
+            Mint New NFT
           </Button>
         </Link>
       </div>

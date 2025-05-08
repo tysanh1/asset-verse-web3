@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
@@ -10,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { useWeb3 } from '@/context/Web3Context';
 import { NFTFormData } from '@/types/nft';
-import { localNFTService } from '@/services/localNFTService';
+import { smartContractService } from '@/services/smartContractService';
 import { ImagePlus, Loader2, X } from 'lucide-react';
 
 const formSchema = z.object({
@@ -47,11 +48,30 @@ const Create: React.FC = () => {
 
     try {
       setIsSubmitting(true);
-      await localNFTService.createNFT(data, account);
+      
+      // Convert image to blob URL if it's a File
+      let imageData = data.image;
+      if (data.image instanceof File) {
+        const reader = new FileReader();
+        imageData = await new Promise((resolve) => {
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.readAsDataURL(data.image as File);
+        });
+      }
+      
+      // Call smart contract service to mint NFT
+      await smartContractService.mintNFT(
+        {
+          name: data.name,
+          description: data.description,
+          image: imageData as string
+        },
+        account
+      );
       
       toast({
         title: "Asset created",
-        description: "Your digital asset has been created successfully!",
+        description: "Your digital asset has been minted successfully!",
       });
       
       navigate('/my-assets');
@@ -213,16 +233,16 @@ const Create: React.FC = () => {
               
               <Button 
                 type="submit" 
-                className="w-full bg-web3-purple hover:bg-web3-deep-purple"
+                className="w-full bg-gradient-to-r from-purple-600 to-blue-500 hover:from-purple-700 hover:to-blue-600"
                 disabled={isSubmitting}
               >
                 {isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Creating...
+                    Minting Asset...
                   </>
                 ) : (
-                  'Create Digital Asset'
+                  'Mint Digital Asset'
                 )}
               </Button>
             </form>

@@ -1,7 +1,6 @@
-
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { nftService } from '@/services/nftService';
+import { smartContractService } from '@/services/smartContractService';
 import { NFT, Transaction } from '@/types/nft';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -30,7 +29,7 @@ const AssetDetail: React.FC = () => {
       
       try {
         setLoading(true);
-        const nftData = await nftService.getNFTById(id);
+        const nftData = await smartContractService.getNFTById(id);
         if (!nftData) {
           toast({
             title: "Asset not found",
@@ -43,7 +42,7 @@ const AssetDetail: React.FC = () => {
         setNft(nftData);
         
         // Fetch transaction history
-        const txHistory = await nftService.getTransactionsByNFT(id);
+        const txHistory = await smartContractService.getNFTTransactions(id);
         setTransactions(txHistory);
       } catch (error) {
         console.error('Error fetching NFT', error);
@@ -83,20 +82,20 @@ const AssetDetail: React.FC = () => {
     
     try {
       setIsTransferring(true);
-      const success = await nftService.transferNFT(account, recipientAddress, nft.id);
+      const success = await smartContractService.transferNFT(account, recipientAddress, nft.id);
       
       if (success) {
         toast({
           title: "Asset transferred",
-          description: "The asset has been transferred successfully",
+          description: "The asset has been transferred successfully via blockchain",
         });
         
         // Update the NFT data
-        const updatedNFT = await nftService.getNFTById(nft.id);
+        const updatedNFT = await smartContractService.getNFTById(nft.id);
         setNft(updatedNFT);
         
         // Refresh transaction history
-        const txHistory = await nftService.getTransactionsByNFT(nft.id);
+        const txHistory = await smartContractService.getNFTTransactions(nft.id);
         setTransactions(txHistory);
         
         setRecipientAddress('');
